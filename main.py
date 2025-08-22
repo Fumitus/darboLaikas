@@ -19,7 +19,6 @@ def main():
     ).execute()
 
     events = events_result.get('items', [])
-    print(events)
 
     if not events:
         print('Nera artejanciu ivykiu')
