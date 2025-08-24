@@ -1,9 +1,6 @@
-from http.cookiejar import month
-
-from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil import parser
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
