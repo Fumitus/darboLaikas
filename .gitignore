@@ -1,6 +1,6 @@
 *.json
 .cfg
 .venv
-*.
+*.txt
 .idea
 
