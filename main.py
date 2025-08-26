@@ -1,27 +1,50 @@
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from datetime import datetime
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from datetime import datetime, timezone
 from dateutil import parser
+import os
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+
 start_date = input("Periodo pradzia (YYYY-MM-DD):")
 end_date = input("Periodo pabaiga (YYYY-MM-DD):")
 
 dt_start = datetime.strptime(start_date, "%Y-%m-%d")
 dt_end = datetime.strptime(end_date, "%Y-%m-%d")
 
-timeMin = dt_start.isoformat() + 'Z'
-timeMax = dt_end.isoformat() + 'Z'
+# Ensure timezone-aware ISO format (UTC)
+timeMin = dt_start.replace(tzinfo=timezone.utc).isoformat()
+timeMax = dt_end.replace(tzinfo=timezone.utc).isoformat()
 
 def main():
-    flow = InstalledAppFlow.from_client_secrets_file('client_secret.json', SCOPES)
-    creds = flow.run_local_server(port=0)
+    creds = None
+
+    # Load saved credentials if available
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+
+    # If no valid creds, refresh or run browser auth once
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'client_secret.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for next runs
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
     service = build('calendar', 'v3', credentials=creds)
 
     events_result = service.events().list(
-        calendarId = 'primary', timeMin=timeMin,
-        timeMax=timeMax, maxResults=30, singleEvents=True,
-        orderBy = 'startTime'
+        calendarId='primary',
+        timeMin=timeMin,
+        timeMax=timeMax,
+        singleEvents=True,
+        orderBy='startTime'
     ).execute()
 
     events = events_result.get('items', [])
@@ -32,14 +55,17 @@ def main():
     ]
 
     counts = {'NV': 0, 'GV': 0}
-    durations = {'NV':0, 'GV': 0} #issaugoti valandomis
+    durations = {'NV': 0, 'GV': 0}  # hours
 
     if not events:
         print('Nera ivykiu')
+
     for event in filtered_events:
         summary = event.get('summary', '')
-        start = parser.isoparse(event['start']['dateTime'])
-        end = parser.isoparse(event['end']['dateTime'])
+        start_raw = event['start'].get('dateTime', event['start'].get('date'))
+        end_raw = event['end'].get('dateTime', event['end'].get('date'))
+        start = parser.isoparse(start_raw)
+        end = parser.isoparse(end_raw)
         duration_valandos = (end - start).total_seconds() / 3600
 
         for prefix in counts.keys():
@@ -48,8 +74,7 @@ def main():
                 durations[prefix] += duration_valandos
 
     print('Darbovietes:', counts)
-    print("isdirbta valandu:", durations)
-
+    print("Isdirbta valandu:", {k: round(v, 2) for k, v in durations.items()})
 
 
 if __name__ == '__main__':
