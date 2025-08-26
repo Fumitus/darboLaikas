@@ -1,7 +1,10 @@
+from flask import Flask
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from datetime import datetime
 from dateutil import parser
+
+app = Flask(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 start_date = input("Periodo pradzia (YYYY-MM-DD):")
@@ -13,6 +16,7 @@ dt_end = datetime.strptime(end_date, "%Y-%m-%d")
 timeMin = dt_start.isoformat() + 'Z'
 timeMax = dt_end.isoformat() + 'Z'
 
+@app.route("/")
 def main():
     flow = InstalledAppFlow.from_client_secrets_file('client_secret.json', SCOPES)
     creds = flow.run_local_server(port=0)
@@ -53,4 +57,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    app.run()
