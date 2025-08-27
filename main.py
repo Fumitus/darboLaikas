@@ -8,8 +8,17 @@ import os
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
-start_date = input("Periodo pradzia (YYYY-MM-DD):")
-end_date = input("Periodo pabaiga (YYYY-MM-DD):")
+# Config directory for storing secrets/tokens
+CONFIG_DIR = os.path.expanduser("~/.config/google/calendar")
+CLIENT_SECRET_FILE = os.path.join(CONFIG_DIR, "client_secret.json")
+TOKEN_FILE = os.path.join(CONFIG_DIR, "token.json")
+
+# Make sure directory exists
+os.makedirs(CONFIG_DIR, exist_ok=True)
+
+# Input date range
+start_date = input("Periodo pradzia (YYYY-MM-DD): ")
+end_date = input("Periodo pabaiga (YYYY-MM-DD): ")
 
 dt_start = datetime.strptime(start_date, "%Y-%m-%d")
 dt_end = datetime.strptime(end_date, "%Y-%m-%d")
@@ -22,8 +31,8 @@ def main():
     creds = None
 
     # Load saved credentials if available
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    if os.path.exists(TOKEN_FILE):
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
 
     # If no valid creds, refresh or run browser auth once
     if not creds or not creds.valid:
@@ -31,11 +40,12 @@ def main():
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                'client_secret.json', SCOPES)
+                CLIENT_SECRET_FILE, SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for next runs
-        with open('token.json', 'w') as token:
+        with open(TOKEN_FILE, 'w') as token:
             token.write(creds.to_json())
+        os.chmod(TOKEN_FILE, 0o600)  # Restrict file permissions (owner read/write only)
 
     service = build('calendar', 'v3', credentials=creds)
 
